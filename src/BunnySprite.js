@@ -2,6 +2,7 @@ import {
     Assets,
     loadTextures,
     Texture,
+    TextureMatrix,
 } from 'pixi.js';
 import {
     useCallback,
@@ -9,7 +10,9 @@ import {
     useRef,
     useState,
 } from 'react';
-import { Application, useTick } from '@pixi/react';
+import { useTick } from '@pixi/react';
+import { collection, getDocs, doc, setDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { db } from './firebaseConfig';
 
 export function BunnySprite() {
     // The Pixi.js `Sprite`
@@ -23,19 +26,25 @@ export function BunnySprite() {
     const [hero3, setHero3] = useState(Texture.EMPTY)
     const [hero4, setHero4] = useState(Texture.EMPTY)
 
-    const [isActive1, setIsActive1] = useState(false)
-    const [isActive2, setIsActive2] = useState(false)
-    const [isActive3, setIsActive3] = useState(false)
-    const [isActive4, setIsActive4] = useState(false)
+    const [hero11, setHero11] = useState(Texture.EMPTY)
+    const [hero12, setHero12] = useState(Texture.EMPTY)
+    const [hero13, setHero13] = useState(Texture.EMPTY)
+    const [hero14, setHero14] = useState(Texture.EMPTY)
+
+    const [isActive, setIsActive] = useState([false, false, false, false])
 
     const [pace, setPace] = useState(0)
-    const [location, setLocation] = useState(1)
+    // const [location, setLocation] = useState([1, 1, 1, 1])
     const [isDice, setIsDice] = useState(false)
 
     const [rotation, setRotation] = useState(0)
+    const [data, setData] = useState([]);
+    const [heroOrder, setHeroOrder] = useState(0)
 
-    const [positionX1, setPositionX1] = useState(265);
-    const [positionY1, setPositionY1] = useState(530);
+    const [positionX, setPositionX] = useState([25, 25, 50, 50]);
+    const [positionY, setPositionY] = useState([500, 530, 500, 530]);
+
+    const firstLocation = [[25, 500], [25, 530], [50, 500], [50, 530]]
 
     function getRandomNumber() {
         const min = 1;
@@ -44,7 +53,6 @@ export function BunnySprite() {
     }
 
     var count = 0
-    var tmp = location
 
     const animateRotation = useCallback(() => setRotation(previousState => previousState + 0.1), [])
 
@@ -58,436 +66,1187 @@ export function BunnySprite() {
                     setDiceTexture(result)
                 })
             setPace(number)
-            tmp = location + number
         }
         else {
             setIsDice(false)
-            setLocation(tmp)
             count = 0;
         }
-    }, [isDice])
+    }, [isDice, isActive])
 
     var countPace = 0;
 
+    // async function addDocument() {
+    //     try {
+    //       // Create a document with a specified ID
+    //       await setDoc(doc(db, 'room', 'user2'), {
+    //         user: 'jupiter',
+    //         hero: 1,
+    //         location : [1,1,1,1],
+    //         pace: 6,
+    //         positionX: [25,25,50,50],
+    //         positionY: [500,530,500,530]
+    //       });
+    //       console.log('Document successfully written!');
+    //     } catch (error) {
+    //       console.error('Error writing document: ', error);
+    //     }
+    //   }
+
+    const updateDocument = async (updatedData, user) => {
+        // Reference the document you want to update
+        const docRef = doc(db, 'room', user);
+        try {
+            // Update the document with new data
+            await updateDoc(docRef, updatedData);
+        } catch (error) {
+            console.error('Error updating document: ', error);
+        }
+    };
+
+    useEffect(() => {
+        // Set up snapshot listener for real-time updates
+        const unsubscribe = onSnapshot(
+            collection(db, 'room'),
+            (querySnapshot) => {
+                const docsArray = querySnapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+                setData(docsArray);
+            },
+            (error) => {
+                console.error("Error fetching real-time data: ", error);
+            }
+        );
+
+        // Clean up the listener on component unmount
+        return () => {
+            unsubscribe();
+        };
+    }, [db]);
+
+    useEffect(() => {
+        const updatedData = {
+            positionX: positionX,
+            positionY: positionY
+        };
+        updateDocument(updatedData, 'user1');
+    }, [positionX, positionY])
+
+    useEffect(() => {
+        const order = isActive.indexOf(true);
+        if (order !== -1) {
+            const item = data.find(item => item.id === "user1")
+            var tmp = item['location'];
+            if (!(item['positionX'][order] == firstLocation[order][0] && item['positionY'][order] == firstLocation[order][1])) {
+                tmp = item['location'].map((num, index) => {
+                    return index === order ? num + pace : num;
+                })
+            }
+            const updatedData = {
+                hero: order,
+                pace: pace,
+                location: tmp,
+                active: true
+            };
+            updateDocument(updatedData, 'user1');
+            setPositionX(data[0]['positionX']);
+            setPositionY(data[0]['positionY']);
+
+        }
+    }, [isActive])
+
     const animateY = useCallback(() => {
-        setPositionY1(previousState => {
-            if (location < 6) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    return previousState - 3
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace < 6 && location >= 6) {
-                if (countPace <= 40 * (pace + 1) && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (6 - location + pace))
-                        return previousState - 3
-                    else {
-                        setPositionX1(previousState => {
-                            return previousState - 3
+        if (data.length !== 0) {
+            if (data[0]['active'] == true && isActive.indexOf(true) !== -1) {
+                const order = data[0]['hero']
+                if (data[0]['positionX'][data[0]['hero']] == firstLocation[data[0]['hero']][0] && data[0]['positionY'][data[0]['hero']] == firstLocation[data[0]['hero']][1]) {
+                    if (data[0]['pace'] == 6) {
+                        setPositionX(previousState => {
+                            var newState = [...previousState];
+                            newState[order] = 265
+                            return newState
                         })
+                        setPositionY(previousState => {
+                            var newState = [...previousState];
+                            newState[order] = 530
+                            return newState
+                        })
+                        setIsActive([false, false, false, false])
                     }
                 }
-                if (countPace > 40 * (pace + 1)) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 6 && location < 12) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    setPositionX1(previousState => {
-                        return previousState - 3
-                    })
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 6 && location > 11 && location < 14) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (11 - location + pace))
-                        setPositionX1(previousState => {
-                            return previousState - 3
-                        })
-                    else {
-                        return previousState - 3
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 6 && location > 13 && location - pace < 11) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (11 - location + pace)) {
-                        setPositionX1(previousState => {
-                            return previousState - 3
-                        })
-                    } else if (countPace > 40 * (11 - location + pace) && countPace <= 40 * (13 - location + pace)) {
-                        return previousState - 3;
-                    } else {
-                        setPositionX1(previousState => {
-                            return previousState + 3
-                        })
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 11 && location < 14) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    return previousState - 3
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 11 && location > 13 && location < 19) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (13 - location + pace))
-                        return previousState - 3
-                    else {
-                        setPositionX1(previousState => {
-                            return previousState + 3
-                        })
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 13 && location > 13 && location < 19) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    setPositionX1(previousState => {
-                        return previousState + 3
-                    })
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace > 13 && location >= 19 && location - pace < 19) {
-                if (countPace <= 40 * (pace + 1) && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (19 - location + pace))
-                        setPositionX1(previousState => {
-                            return previousState + 3
-                        })
-                    else {
-                        return previousState - 3
-                    }
-                }
-                if (countPace > 40 * (pace + 1)) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
+                else {
+                    setPositionY(previousState => {
+                        if (data[0]['location'][data[0]['hero']] < 6) {
+                            if (countPace <= 38 * data[0]['pace']) {
+                                countPace = countPace + 2
+                                var newState = [...previousState];
+                                newState[order] -= 2
+                                return newState
+                            }
+                            if (countPace > 38 * data[0]['pace']) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace < 6 && data[0]['location'][data[0]['hero']] >= 6) {
+                            if (countPace <= 38 * (pace + 1)) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (6 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState
+                                }
+                                else {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] -= 2
+                                        return newState
+                                    })
+                                }
+                            }
+                            if (countPace > 38 * (pace + 1)) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 6 && data[0]['location'][data[0]['hero']] < 12) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                setPositionX(previousState => {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState
+                                })
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 6 && data[0]['location'][data[0]['hero']] > 11 && data[0]['location'][data[0]['hero']] < 14) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (11 - data[0]['location'][data[0]['hero']] + pace))
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] -= 2
+                                        return newState
+                                    })
+                                else {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 6 && data[0]['location'][data[0]['hero']] > 13 && data[0]['location'][data[0]['hero']] - pace < 11) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (11 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] -= 2
+                                        return newState
+                                    })
+                                } else if (countPace > 38 * (11 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (13 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState;
+                                } else {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] += 2
+                                        return newState
+                                    })
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 11 && data[0]['location'][data[0]['hero']] < 14) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                var newState = [...previousState];
+                                newState[order] -= 2
+                                return newState
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 11 && data[0]['location'][data[0]['hero']] > 13 && data[0]['location'][data[0]['hero']] < 19) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (13 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState
+                                }
+                                else {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] += 2
+                                        return newState
+                                    })
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 13 && data[0]['location'][data[0]['hero']] > 13 && data[0]['location'][data[0]['hero']] < 19) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                setPositionX(previousState => {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState
+                                })
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace > 13 && data[0]['location'][data[0]['hero']] >= 19 && data[0]['location'][data[0]['hero']] - pace < 19) {
+                            if (countPace <= 38 * (pace + 1)) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (19 - data[0]['location'][data[0]['hero']] + pace))
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] += 2
+                                        return newState
+                                    })
+                                else {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState
+                                }
+                            }
+                            if (countPace > 38 * (pace + 1)) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
 
-            if (location - pace >= 19 && location < 25) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    return previousState - 3;
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 19 && location > 24 && location < 27) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (24 - location + pace))
-                        return previousState - 3
-                    else {
-                        setPositionX1(previousState => {
-                            return previousState + 3
-                        })
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 19 && location > 26 && location - pace < 24) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (24 - location + pace)) {
-                        return previousState - 3;
-                    } else if (countPace > 40 * (24 - location + pace) && countPace <= 40 * (26 - location + pace)) {
-                        setPositionX1(previousState => {
-                            return previousState + 3
-                        })
-                    } else {
-                        return previousState + 3;
+                        if (data[0]['location'][data[0]['hero']] - pace >= 19 && data[0]['location'][data[0]['hero']] < 25) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                var newState = [...previousState];
+                                newState[order] -= 2
+                                return newState;
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 19 && data[0]['location'][data[0]['hero']] > 24 && data[0]['location'][data[0]['hero']] < 27) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (24 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState
+                                }
+                                else {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] += 2
+                                        return newState
+                                    })
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 19 && data[0]['location'][data[0]['hero']] > 26 && data[0]['location'][data[0]['hero']] - pace < 24) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (24 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState;
+                                } else if (countPace > 38 * (24 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (26 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] += 2
+                                        return newState
+                                    })
+                                } else {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState;
 
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 24 && location < 27) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    setPositionX1(previousState => {
-                        return previousState + 3
-                    })
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 24 && location > 26 && location < 32) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (26 - location + pace))
-                        setPositionX1(previousState => {
-                            return previousState + 3
-                        })
-                    else {
-                        return previousState + 3
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 26 && location > 26 && location < 32) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    return previousState + 3
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace > 26 && location >= 32  && location - pace < 32) {
-                if (countPace <= 40 * (pace + 1) && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (32 - location + pace))
-                        return previousState + 3
-                    else {
-                        setPositionX1(previousState => {
-                            return previousState + 3
-                        })
-                    }
-                }
-                if (countPace > 40 * (pace + 1)) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 24 && data[0]['location'][data[0]['hero']] < 27) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                setPositionX(previousState => {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState
+                                })
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 24 && data[0]['location'][data[0]['hero']] > 26 && data[0]['location'][data[0]['hero']] < 32) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (26 - data[0]['location'][data[0]['hero']] + pace))
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] += 2
+                                        return newState
+                                    })
+                                else {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 26 && data[0]['location'][data[0]['hero']] > 26 && data[0]['location'][data[0]['hero']] < 32) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                var newState = [...previousState];
+                                newState[order] += 2
+                                return newState
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace > 26 && data[0]['location'][data[0]['hero']] >= 32 && data[0]['location'][data[0]['hero']] - pace < 32) {
+                            if (countPace <= 38 * (pace + 1)) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (32 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState
+                                }
+                                else {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] += 2
+                                        return newState
+                                    })
+                                }
+                            }
+                            if (countPace > 38 * (pace + 1)) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
 
-            if (location - pace >= 32 && location < 38) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    setPositionX1(previousState => {
-                        return previousState + 3
-                    })
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 32 && location > 37 && location < 40) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (37 - location + pace))
-                        setPositionX1(previousState => {
-                            return previousState + 3
-                        })
-                    else {
-                        return previousState + 3
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 32 && location > 39 && location - pace < 37) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (37 - location + pace)) {
-                        setPositionX1(previousState => {
-                            return previousState + 3
-                        })
-                    } else if (countPace > 40 * (24 - location + pace) && countPace <= 40 * (39 - location + pace)) {                        
-                        return previousState + 3;
-                    } else {
-                        setPositionX1(previousState => {
-                            return previousState - 3
-                        })
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 37 && location < 40) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    return previousState + 3
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 37 && location > 39 && location < 45) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (39 - location + pace))
-                        return previousState + 3
-                    else {
-                        setPositionX1(previousState => {
-                            return previousState - 3
-                        })
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 39 && location > 39 && location < 45) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    setPositionX1(previousState => {
-                        return previousState - 3
-                    })
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace > 39 && location >= 45 && location - pace < 45) {
-                if (countPace <= 40 * (pace + 1) && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (45 - location + pace))
-                        setPositionX1(previousState => {
-                            return previousState - 3
-                        })
-                    else {
-                        return previousState + 3
-                    }
-                }
-                if (countPace > 40 * (pace + 1)) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 32 && data[0]['location'][data[0]['hero']] < 38) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                setPositionX(previousState => {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState
+                                })
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 32 && data[0]['location'][data[0]['hero']] > 37 && data[0]['location'][data[0]['hero']] < 40) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (37 - data[0]['location'][data[0]['hero']] + pace))
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] += 2
+                                        return newState
+                                    })
+                                else {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 32 && data[0]['location'][data[0]['hero']] > 39 && data[0]['location'][data[0]['hero']] - pace < 37) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (37 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] += 2
+                                        return newState
+                                    })
+                                } else if (countPace > 38 * (24 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (39 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState;
+                                } else {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] -= 2
+                                        return newState
+                                    })
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 37 && data[0]['location'][data[0]['hero']] < 40) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                var newState = [...previousState];
+                                newState[order] += 2
+                                return newState
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 37 && data[0]['location'][data[0]['hero']] > 39 && data[0]['location'][data[0]['hero']] < 45) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (39 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState
+                                }
+                                else {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] -= 2
+                                        return newState
+                                    })
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 39 && data[0]['location'][data[0]['hero']] > 39 && data[0]['location'][data[0]['hero']] < 45) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                setPositionX(previousState => {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState
+                                })
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace > 39 && data[0]['location'][data[0]['hero']] >= 45 && data[0]['location'][data[0]['hero']] - pace < 45) {
+                            if (countPace <= 38 * (pace + 1)) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (45 - data[0]['location'][data[0]['hero']] + pace))
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] -= 2
+                                        return newState
+                                    })
+                                else {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState
+                                }
+                            }
+                            if (countPace > 38 * (pace + 1)) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
 
-            if (location - pace >= 45 && location < 51) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    return previousState + 3
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 45 && location > 50 && location < 52) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (50 - location + pace))
-                        return previousState + 3
-                    else {
-                        setPositionX1(previousState => {
-                            return previousState - 3
-                        })
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 45 && location > 51 && location - pace < 50) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (50 - location + pace)) {
-                        return previousState + 3;                        
-                    } else if (countPace > 40 * (50 - location + pace) && countPace <= 40 * (51 - location + pace)) {    
-                        setPositionX1(previousState => {
-                            return previousState - 3
-                        })             
-                    } else {
-                        return previousState - 3;
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 50 && location < 52) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    setPositionX1(previousState => {
-                        return previousState - 3
+                        if (data[0]['location'][data[0]['hero']] - pace >= 45 && data[0]['location'][data[0]['hero']] < 51) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                var newState = [...previousState];
+                                newState[order] += 2
+                                return newState
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 45 && data[0]['location'][data[0]['hero']] > 50 && data[0]['location'][data[0]['hero']] < 52) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (50 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState
+                                }
+                                else {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] -= 2
+                                        return newState
+                                    })
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 45 && data[0]['location'][data[0]['hero']] > 51 && data[0]['location'][data[0]['hero']] - pace < 50) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (50 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    var newState = [...previousState];
+                                    newState[order] += 2
+                                    return newState;
+                                } else if (countPace > 38 * (50 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (51 - data[0]['location'][data[0]['hero']] + pace)) {
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] -= 2
+                                        return newState
+                                    })
+                                } else {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState;
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 50 && data[0]['location'][data[0]['hero']] < 52) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                setPositionX(previousState => {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState
+                                })
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 50 && data[0]['location'][data[0]['hero']] > 51 && data[0]['location'][data[0]['hero']] < 57) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                if (countPace <= 38 * (51 - data[0]['location'][data[0]['hero']] + pace))
+                                    setPositionX(previousState => {
+                                        var newState = [...previousState];
+                                        newState[order] -= 2
+                                        return newState
+                                    })
+                                else {
+                                    var newState = [...previousState];
+                                    newState[order] -= 2
+                                    return newState
+                                }
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        if (data[0]['location'][data[0]['hero']] - pace >= 51 && data[0]['location'][data[0]['hero']] > 51 && data[0]['location'][data[0]['hero']] < 57) {
+                            if (countPace <= 38 * pace) {
+                                countPace = countPace + 2
+                                var newState = [...previousState];
+                                newState[order] -= 2
+                                return newState
+                            }
+                            if (countPace > 38 * pace) {
+                                setIsActive([false, false, false, false])
+                                countPace = 0;
+                            }
+                        }
+                        return previousState
                     })
                 }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
             }
-            if (location - pace >= 50 && location > 51 && location < 57) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    if (countPace <= 40 * (51 - location + pace))
-                        setPositionX1(previousState => {
-                            return previousState - 3
-                        })
-                    else {
-                        return previousState - 3
-                    }
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            if (location - pace >= 51 && location > 51 && location < 57) {
-                if (countPace <= 40 * pace && isActive1 == true) {
-                    countPace = countPace + 3
-                    return previousState - 3
-                }
-                if (countPace > 40 * pace) {
-                    setIsActive1(!isActive1)
-                    countPace = 0;
-                }
-            }
-            return previousState
-        })
-    }, [isActive1])
+        }
+    }, [isActive])
+    // const order = isActive.indexOf(true);
+    // if (order !== -1) {
+    //     setHeroOrder(order);
+    //     if (positionX[order] == firstLocation[order][0] && positionY[order] == firstLocation[order][1]) {
+    //         if (pace == 6) {
+    //             setPositionX(previousState => {
+    //                 var newState = [...previousState];
+    //                 newState[order] = 265
+    //                 return newState
+    //             })
+    //             setPositionY(previousState => {
+    //                 var newState = [...previousState];
+    //                 newState[order] = 530
+    //                 return newState
+    //             })
+    //         }
+    //     }
+    //     else {
+    //         tmp = location.map((num, index) => {
+    //             return index === order ? num + pace : num;
+    //         })
+    //         setLocation(tmp)
+    //         setPositionY(previousState => {
+    //             if (data[0]['location'][data[0]['hero']] < 6) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     var newState = [...previousState];
+    //                     newState[order] -= 2
+    //                     return newState
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace < 6 && data[0]['location'][data[0]['hero']] >= 6) {
+    //                 if (countPace <= 38 * (pace + 1)) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (6 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState
+    //                     }
+    //                     else {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] -= 2
+    //                             return newState
+    //                         })
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * (pace + 1)) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 6 && data[0]['location'][data[0]['hero']] < 12) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     setPositionX(previousState => {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState
+    //                     })
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 6 && data[0]['location'][data[0]['hero']] > 11 && data[0]['location'][data[0]['hero']] < 14) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (11 - data[0]['location'][data[0]['hero']] + pace))
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] -= 2
+    //                             return newState
+    //                         })
+    //                     else {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 6 && data[0]['location'][data[0]['hero']] > 13 && data[0]['location'][data[0]['hero']] - pace < 11) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (11 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] -= 2
+    //                             return newState
+    //                         })
+    //                     } else if (countPace > 38 * (11 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (13 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState;
+    //                     } else {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] += 2
+    //                             return newState
+    //                         })
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 11 && data[0]['location'][data[0]['hero']] < 14) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     var newState = [...previousState];
+    //                     newState[order] -= 2
+    //                     return newState
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 11 && data[0]['location'][data[0]['hero']] > 13 && data[0]['location'][data[0]['hero']] < 19) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (13 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState
+    //                     }
+    //                     else {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] += 2
+    //                             return newState
+    //                         })
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 13 && data[0]['location'][data[0]['hero']] > 13 && data[0]['location'][data[0]['hero']] < 19) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     setPositionX(previousState => {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState
+    //                     })
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace > 13 && data[0]['location'][data[0]['hero']] >= 19 && data[0]['location'][data[0]['hero']] - pace < 19) {
+    //                 if (countPace <= 38 * (pace + 1)) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (19 - data[0]['location'][data[0]['hero']] + pace))
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] += 2
+    //                             return newState
+    //                         })
+    //                     else {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * (pace + 1)) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 19 && data[0]['location'][data[0]['hero']] < 25) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     var newState = [...previousState];
+    //                     newState[order] -= 2
+    //                     return newState;
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 19 && data[0]['location'][data[0]['hero']] > 24 && data[0]['location'][data[0]['hero']] < 27) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (24 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState
+    //                     }
+    //                     else {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] += 2
+    //                             return newState
+    //                         })
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 19 && data[0]['location'][data[0]['hero']] > 26 && data[0]['location'][data[0]['hero']] - pace < 24) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (24 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState;
+    //                     } else if (countPace > 38 * (24 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (26 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] += 2
+    //                             return newState
+    //                         })
+    //                     } else {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState;
+
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 24 && data[0]['location'][data[0]['hero']] < 27) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     setPositionX(previousState => {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState
+    //                     })
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 24 && data[0]['location'][data[0]['hero']] > 26 && data[0]['location'][data[0]['hero']] < 32) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (26 - data[0]['location'][data[0]['hero']] + pace))
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] += 2
+    //                             return newState
+    //                         })
+    //                     else {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 26 && data[0]['location'][data[0]['hero']] > 26 && data[0]['location'][data[0]['hero']] < 32) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     var newState = [...previousState];
+    //                     newState[order] += 2
+    //                     return newState
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace > 26 && data[0]['location'][data[0]['hero']] >= 32 && data[0]['location'][data[0]['hero']] - pace < 32) {
+    //                 if (countPace <= 38 * (pace + 1)) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (32 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState
+    //                     }
+    //                     else {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] += 2
+    //                             return newState
+    //                         })
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * (pace + 1)) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 32 && data[0]['location'][data[0]['hero']] < 38) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     setPositionX(previousState => {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState
+    //                     })
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 32 && data[0]['location'][data[0]['hero']] > 37 && data[0]['location'][data[0]['hero']] < 40) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (37 - data[0]['location'][data[0]['hero']] + pace))
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] += 2
+    //                             return newState
+    //                         })
+    //                     else {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 32 && data[0]['location'][data[0]['hero']] > 39 && data[0]['location'][data[0]['hero']] - pace < 37) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (37 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] += 2
+    //                             return newState
+    //                         })
+    //                     } else if (countPace > 38 * (24 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (39 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState;
+    //                     } else {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] -= 2
+    //                             return newState
+    //                         })
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 37 && data[0]['location'][data[0]['hero']] < 40) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     var newState = [...previousState];
+    //                     newState[order] += 2
+    //                     return newState
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 37 && data[0]['location'][data[0]['hero']] > 39 && data[0]['location'][data[0]['hero']] < 45) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (39 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState
+    //                     }
+    //                     else {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] -= 2
+    //                             return newState
+    //                         })
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 39 && data[0]['location'][data[0]['hero']] > 39 && data[0]['location'][data[0]['hero']] < 45) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     setPositionX(previousState => {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState
+    //                     })
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace > 39 && data[0]['location'][data[0]['hero']] >= 45 && data[0]['location'][data[0]['hero']] - pace < 45) {
+    //                 if (countPace <= 38 * (pace + 1)) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (45 - data[0]['location'][data[0]['hero']] + pace))
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] -= 2
+    //                             return newState
+    //                         })
+    //                     else {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * (pace + 1)) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 45 && data[0]['location'][data[0]['hero']] < 51) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     var newState = [...previousState];
+    //                     newState[order] += 2
+    //                     return newState
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 45 && data[0]['location'][data[0]['hero']] > 50 && data[0]['location'][data[0]['hero']] < 52) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (50 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState
+    //                     }
+    //                     else {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] -= 2
+    //                             return newState
+    //                         })
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 45 && data[0]['location'][data[0]['hero']] > 51 && data[0]['location'][data[0]['hero']] - pace < 50) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (50 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         var newState = [...previousState];
+    //                         newState[order] += 2
+    //                         return newState;
+    //                     } else if (countPace > 38 * (50 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (51 - data[0]['location'][data[0]['hero']] + pace)) {
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] -= 2
+    //                             return newState
+    //                         })
+    //                     } else {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState;
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 50 && data[0]['location'][data[0]['hero']] < 52) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     setPositionX(previousState => {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState
+    //                     })
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 50 && data[0]['location'][data[0]['hero']] > 51 && data[0]['location'][data[0]['hero']] < 57) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     if (countPace <= 38 * (51 - data[0]['location'][data[0]['hero']] + pace))
+    //                         setPositionX(previousState => {
+    //                             var newState = [...previousState];
+    //                             newState[order] -= 2
+    //                             return newState
+    //                         })
+    //                     else {
+    //                         var newState = [...previousState];
+    //                         newState[order] -= 2
+    //                         return newState
+    //                     }
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             if (data[0]['location'][data[0]['hero']] - pace >= 51 && data[0]['location'][data[0]['hero']] > 51 && data[0]['location'][data[0]['hero']] < 57) {
+    //                 if (countPace <= 38 * pace) {
+    //                     countPace = countPace + 2
+    //                     var newState = [...previousState];
+    //                     newState[order] -= 2
+    //                     return newState
+    //                 }
+    //                 if (countPace > 38 * pace) {
+    //                     setIsActive([false, false, false, false])
+    //                     countPace = 0;
+    //                 }
+    //             }
+    //             return previousState
+    //         })
+    //     }
+    // }
+
 
     useTick(animateRotation)
     useTick(animateY)
@@ -520,8 +1279,28 @@ export function BunnySprite() {
                 .then((result) => {
                     setHero4(result)
                 });
+            Assets
+                .load('/image/ludo_hero.png')
+                .then((result) => {
+                    setHero11(result)
+                });
+            Assets
+                .load('/image/ludo_hero.png')
+                .then((result) => {
+                    setHero12(result)
+                });
+            Assets
+                .load('/image/ludo_hero.png')
+                .then((result) => {
+                    setHero13(result)
+                });
+            Assets
+                .load('/image/ludo_hero.png')
+                .then((result) => {
+                    setHero14(result)
+                });
         }
-    }, [texture, hero1, hero2, hero3, hero4,]);
+    }, [texture, hero1, hero2, hero3, hero4, hero11, hero12, hero13, hero14]);
 
     return (
         <>
@@ -546,39 +1325,72 @@ export function BunnySprite() {
             <pixiSprite
                 anchor={0.5}
                 eventMode={'dynamic'}
-                onClick={() => setIsActive1(!isActive1)}
+                onClick={() => setIsActive([true, false, false, false])}
                 texture={hero1}
                 width={25}
                 height={60}
-                x={positionX1}
-                y={positionY1} />
+                x={data.length == 0 ? 25 : data[0]['positionX'][0] != null ? data[0]['positionX'][0] : 25}
+                y={data.length == 0 ? 500 : data[0]['positionY'][0] != null ? data[0]['positionY'][0] : 500} />
             <pixiSprite
                 anchor={0.5}
                 eventMode={'dynamic'}
-                onClick={() => setIsActive2(!isActive2)}
+                onClick={() => setIsActive([false, true, false, false])}
                 texture={hero2}
                 width={25}
                 height={60}
-                x={25}
-                y={530} />
+                x={data.length == 0 ? 25 : data[0]['positionX'][1] != null ? data[0]['positionX'][1] : 25}
+                y={data.length == 0 ? 530 : data[0]['positionY'][1] != null ? data[0]['positionY'][1] : 530} />
             <pixiSprite
                 anchor={0.5}
                 eventMode={'dynamic'}
-                onClick={() => setIsActive3(!isActive3)}
+                onClick={() => setIsActive([false, false, true, false])}
                 texture={hero3}
                 width={25}
                 height={60}
-                x={25}
-                y={530} />
+                x={data.length == 0 ? 50 : data[0]['positionX'][2] != null ? data[0]['positionX'][2] : 50}
+                y={data.length == 0 ? 500 : data[0]['positionY'][2] != null ? data[0]['positionY'][2] : 500} />
             <pixiSprite
                 anchor={0.5}
                 eventMode={'dynamic'}
-                onClick={() => setIsActive4(!isActive4)}
+                onClick={() => setIsActive([false, false, false, true])}
                 texture={hero4}
                 width={25}
                 height={60}
-                x={25}
-                y={530} />
+                x={data.length == 0 ? 50 : data[0]['positionX'][3] != null ? data[0]['positionX'][3] : 50}
+                y={data.length == 0 ? 530 : data[0]['positionY'][3] != null ? data[0]['positionY'][3] : 530} />
+
+            <pixiSprite
+                anchor={0.5}
+                eventMode={'dynamic'}
+                texture={hero11}
+                width={25}
+                height={60}
+                x={data.length == 0 ? 550 : data[1]['positionX'][0] != null ? data[1]['positionX'][0] : 550}
+                y={data.length == 0 ? 100 : data[1]['positionY'][0] != null ? data[1]['positionY'][0] : 100} />
+            <pixiSprite
+                anchor={0.5}
+                eventMode={'dynamic'}
+                texture={hero11}
+                width={25}
+                height={60}
+                x={data.length == 0 ? 550 : data[1]['positionX'][1] != null ? data[1]['positionX'][1] : 550}
+                y={data.length == 0 ? 70 : data[1]['positionY'][1] != null ? data[1]['positionY'][1] : 70} />
+            <pixiSprite
+                anchor={0.5}
+                eventMode={'dynamic'}
+                texture={hero11}
+                width={25}
+                height={60}
+                x={data.length == 0 ? 575 : data[1]['positionX'][2] != null ? data[1]['positionX'][2] : 575}
+                y={data.length == 0 ? 100 : data[1]['positionY'][2] != null ? data[1]['positionY'][2] : 100} />
+            <pixiSprite
+                anchor={0.5}
+                eventMode={'dynamic'}
+                texture={hero11}
+                width={25}
+                height={60}
+                x={data.length == 0 ? 575 : data[1]['positionX'][3] != null ? data[1]['positionX'][3] : 575}
+                y={data.length == 0 ? 70 : data[1]['positionY'][3] != null ? data[1]['positionY'][3] : 70} />
         </>
     );
 }
