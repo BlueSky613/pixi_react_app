@@ -260,7 +260,7 @@ export function BunnySprite() {
                                 } else {
                                     setPositionX(previousState => {
                                         var newState = [...previousState];
-                                        newState[order] += 2
+                                        newState[order] += 3
                                         return newState
                                     })
                                 }
@@ -293,7 +293,7 @@ export function BunnySprite() {
                                 else {
                                     setPositionX(previousState => {
                                         var newState = [...previousState];
-                                        newState[order] += 2
+                                        newState[order] += 3
                                         return newState
                                     })
                                 }
@@ -308,7 +308,7 @@ export function BunnySprite() {
                                 countPace = countPace + 2
                                 setPositionX(previousState => {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState
                                 })
                             }
@@ -323,7 +323,7 @@ export function BunnySprite() {
                                 if (countPace <= 38 * (19 - data[0]['location'][data[0]['hero']] + pace))
                                     setPositionX(previousState => {
                                         var newState = [...previousState];
-                                        newState[order] += 2
+                                        newState[order] += 3
                                         return newState
                                     })
                                 else {
@@ -361,7 +361,7 @@ export function BunnySprite() {
                                 else {
                                     setPositionX(previousState => {
                                         var newState = [...previousState];
-                                        newState[order] += 2
+                                        newState[order] += 3
                                         return newState
                                     })
                                 }
@@ -381,12 +381,12 @@ export function BunnySprite() {
                                 } else if (countPace > 38 * (24 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (26 - data[0]['location'][data[0]['hero']] + pace)) {
                                     setPositionX(previousState => {
                                         var newState = [...previousState];
-                                        newState[order] += 2
+                                        newState[order] += 3
                                         return newState
                                     })
                                 } else {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState;
 
                                 }
@@ -401,7 +401,7 @@ export function BunnySprite() {
                                 countPace = countPace + 2
                                 setPositionX(previousState => {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState
                                 })
                             }
@@ -416,12 +416,12 @@ export function BunnySprite() {
                                 if (countPace <= 38 * (26 - data[0]['location'][data[0]['hero']] + pace))
                                     setPositionX(previousState => {
                                         var newState = [...previousState];
-                                        newState[order] += 2
+                                        newState[order] += 3
                                         return newState
                                     })
                                 else {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState
                                 }
                             }
@@ -434,7 +434,7 @@ export function BunnySprite() {
                             if (countPace <= 38 * pace) {
                                 countPace = countPace + 2
                                 var newState = [...previousState];
-                                newState[order] += 2
+                                newState[order] += 3
                                 return newState
                             }
                             if (countPace > 38 * pace) {
@@ -447,13 +447,13 @@ export function BunnySprite() {
                                 countPace = countPace + 2
                                 if (countPace <= 38 * (32 - data[0]['location'][data[0]['hero']] + pace)) {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState
                                 }
                                 else {
                                     setPositionX(previousState => {
                                         var newState = [...previousState];
-                                        newState[order] += 2
+                                        newState[order] += 3
                                         return newState
                                     })
                                 }
@@ -469,7 +469,7 @@ export function BunnySprite() {
                                 countPace = countPace + 2
                                 setPositionX(previousState => {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState
                                 })
                             }
@@ -484,12 +484,12 @@ export function BunnySprite() {
                                 if (countPace <= 38 * (37 - data[0]['location'][data[0]['hero']] + pace))
                                     setPositionX(previousState => {
                                         var newState = [...previousState];
-                                        newState[order] += 2
+                                        newState[order] += 3
                                         return newState
                                     })
                                 else {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState
                                 }
                             }
@@ -504,12 +504,12 @@ export function BunnySprite() {
                                 if (countPace <= 38 * (37 - data[0]['location'][data[0]['hero']] + pace)) {
                                     setPositionX(previousState => {
                                         var newState = [...previousState];
-                                        newState[order] += 2
+                                        newState[order] += 3
                                         return newState
                                     })
                                 } else if (countPace > 38 * (24 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (39 - data[0]['location'][data[0]['hero']] + pace)) {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState;
                                 } else {
                                     setPositionX(previousState => {
@@ -528,7 +528,7 @@ export function BunnySprite() {
                             if (countPace <= 38 * pace) {
                                 countPace = countPace + 2
                                 var newState = [...previousState];
-                                newState[order] += 2
+                                newState[order] += 3
                                 return newState
                             }
                             if (countPace > 38 * pace) {
@@ -541,7 +541,7 @@ export function BunnySprite() {
                                 countPace = countPace + 2
                                 if (countPace <= 38 * (39 - data[0]['location'][data[0]['hero']] + pace)) {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState
                                 }
                                 else {
@@ -582,7 +582,7 @@ export function BunnySprite() {
                                     })
                                 else {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState
                                 }
                             }
@@ -596,7 +596,7 @@ export function BunnySprite() {
                             if (countPace <= 38 * pace) {
                                 countPace = countPace + 2
                                 var newState = [...previousState];
-                                newState[order] += 2
+                                newState[order] += 3
                                 return newState
                             }
                             if (countPace > 38 * pace) {
@@ -609,7 +609,7 @@ export function BunnySprite() {
                                 countPace = countPace + 2
                                 if (countPace <= 38 * (50 - data[0]['location'][data[0]['hero']] + pace)) {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState
                                 }
                                 else {
@@ -630,7 +630,7 @@ export function BunnySprite() {
                                 countPace = countPace + 2
                                 if (countPace <= 38 * (50 - data[0]['location'][data[0]['hero']] + pace)) {
                                     var newState = [...previousState];
-                                    newState[order] += 2
+                                    newState[order] += 3
                                     return newState;
                                 } else if (countPace > 38 * (50 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (51 - data[0]['location'][data[0]['hero']] + pace)) {
                                     setPositionX(previousState => {
@@ -807,7 +807,7 @@ export function BunnySprite() {
     //                     } else {
     //                         setPositionX(previousState => {
     //                             var newState = [...previousState];
-    //                             newState[order] += 2
+    //                             newState[order] += 3
     //                             return newState
     //                         })
     //                     }
@@ -840,7 +840,7 @@ export function BunnySprite() {
     //                     else {
     //                         setPositionX(previousState => {
     //                             var newState = [...previousState];
-    //                             newState[order] += 2
+    //                             newState[order] += 3
     //                             return newState
     //                         })
     //                     }
@@ -855,7 +855,7 @@ export function BunnySprite() {
     //                     countPace = countPace + 2
     //                     setPositionX(previousState => {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState
     //                     })
     //                 }
@@ -870,7 +870,7 @@ export function BunnySprite() {
     //                     if (countPace <= 38 * (19 - data[0]['location'][data[0]['hero']] + pace))
     //                         setPositionX(previousState => {
     //                             var newState = [...previousState];
-    //                             newState[order] += 2
+    //                             newState[order] += 3
     //                             return newState
     //                         })
     //                     else {
@@ -908,7 +908,7 @@ export function BunnySprite() {
     //                     else {
     //                         setPositionX(previousState => {
     //                             var newState = [...previousState];
-    //                             newState[order] += 2
+    //                             newState[order] += 3
     //                             return newState
     //                         })
     //                     }
@@ -928,12 +928,12 @@ export function BunnySprite() {
     //                     } else if (countPace > 38 * (24 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (26 - data[0]['location'][data[0]['hero']] + pace)) {
     //                         setPositionX(previousState => {
     //                             var newState = [...previousState];
-    //                             newState[order] += 2
+    //                             newState[order] += 3
     //                             return newState
     //                         })
     //                     } else {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState;
 
     //                     }
@@ -948,7 +948,7 @@ export function BunnySprite() {
     //                     countPace = countPace + 2
     //                     setPositionX(previousState => {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState
     //                     })
     //                 }
@@ -963,12 +963,12 @@ export function BunnySprite() {
     //                     if (countPace <= 38 * (26 - data[0]['location'][data[0]['hero']] + pace))
     //                         setPositionX(previousState => {
     //                             var newState = [...previousState];
-    //                             newState[order] += 2
+    //                             newState[order] += 3
     //                             return newState
     //                         })
     //                     else {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState
     //                     }
     //                 }
@@ -981,7 +981,7 @@ export function BunnySprite() {
     //                 if (countPace <= 38 * pace) {
     //                     countPace = countPace + 2
     //                     var newState = [...previousState];
-    //                     newState[order] += 2
+    //                     newState[order] += 3
     //                     return newState
     //                 }
     //                 if (countPace > 38 * pace) {
@@ -994,13 +994,13 @@ export function BunnySprite() {
     //                     countPace = countPace + 2
     //                     if (countPace <= 38 * (32 - data[0]['location'][data[0]['hero']] + pace)) {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState
     //                     }
     //                     else {
     //                         setPositionX(previousState => {
     //                             var newState = [...previousState];
-    //                             newState[order] += 2
+    //                             newState[order] += 3
     //                             return newState
     //                         })
     //                     }
@@ -1016,7 +1016,7 @@ export function BunnySprite() {
     //                     countPace = countPace + 2
     //                     setPositionX(previousState => {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState
     //                     })
     //                 }
@@ -1031,12 +1031,12 @@ export function BunnySprite() {
     //                     if (countPace <= 38 * (37 - data[0]['location'][data[0]['hero']] + pace))
     //                         setPositionX(previousState => {
     //                             var newState = [...previousState];
-    //                             newState[order] += 2
+    //                             newState[order] += 3
     //                             return newState
     //                         })
     //                     else {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState
     //                     }
     //                 }
@@ -1051,12 +1051,12 @@ export function BunnySprite() {
     //                     if (countPace <= 38 * (37 - data[0]['location'][data[0]['hero']] + pace)) {
     //                         setPositionX(previousState => {
     //                             var newState = [...previousState];
-    //                             newState[order] += 2
+    //                             newState[order] += 3
     //                             return newState
     //                         })
     //                     } else if (countPace > 38 * (24 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (39 - data[0]['location'][data[0]['hero']] + pace)) {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState;
     //                     } else {
     //                         setPositionX(previousState => {
@@ -1075,7 +1075,7 @@ export function BunnySprite() {
     //                 if (countPace <= 38 * pace) {
     //                     countPace = countPace + 2
     //                     var newState = [...previousState];
-    //                     newState[order] += 2
+    //                     newState[order] += 3
     //                     return newState
     //                 }
     //                 if (countPace > 38 * pace) {
@@ -1088,7 +1088,7 @@ export function BunnySprite() {
     //                     countPace = countPace + 2
     //                     if (countPace <= 38 * (39 - data[0]['location'][data[0]['hero']] + pace)) {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState
     //                     }
     //                     else {
@@ -1129,7 +1129,7 @@ export function BunnySprite() {
     //                         })
     //                     else {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState
     //                     }
     //                 }
@@ -1143,7 +1143,7 @@ export function BunnySprite() {
     //                 if (countPace <= 38 * pace) {
     //                     countPace = countPace + 2
     //                     var newState = [...previousState];
-    //                     newState[order] += 2
+    //                     newState[order] += 3
     //                     return newState
     //                 }
     //                 if (countPace > 38 * pace) {
@@ -1156,7 +1156,7 @@ export function BunnySprite() {
     //                     countPace = countPace + 2
     //                     if (countPace <= 38 * (50 - data[0]['location'][data[0]['hero']] + pace)) {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState
     //                     }
     //                     else {
@@ -1177,7 +1177,7 @@ export function BunnySprite() {
     //                     countPace = countPace + 2
     //                     if (countPace <= 38 * (50 - data[0]['location'][data[0]['hero']] + pace)) {
     //                         var newState = [...previousState];
-    //                         newState[order] += 2
+    //                         newState[order] += 3
     //                         return newState;
     //                     } else if (countPace > 38 * (50 - data[0]['location'][data[0]['hero']] + pace) && countPace <= 38 * (51 - data[0]['location'][data[0]['hero']] + pace)) {
     //                         setPositionX(previousState => {
